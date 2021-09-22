@@ -57,12 +57,13 @@ if __name__ == '__main__':
 
     # Se reinicia el environment
     env.reset()
+    
 
     # Parametros para el detector de patos
     # Se debe encontrar el rango apropiado
-    lower_yellow = np.array([H_m, S_m, V_m])
-    upper_yellow = np.array([H_M, S_M, V_M])
-    min_area = 2500
+    lower_yellow = np.array([0, 150, 170]) #B G R
+    upper_yellow = np.array([10, 255, 255])
+    min_area = 2000
 
     while True:
 
@@ -87,13 +88,14 @@ if __name__ == '__main__':
         ### CÓDIGO DE DETECCIÓN POR COLOR ###
 
         #Transformar imagen a espacio HSV
-
+        
+        image_hsv = cv2.cvtColor(obs, cv2.COLOR_RGB2BGR)
 
         # Filtrar colores de la imagen en el rango utilizando
 
-
+        mask1 = cv2.inRange(image_hsv, lower_yellow, upper_yellow)        
         # Bitwise-AND entre máscara (mask) y original (obs) para visualizar lo filtrado
-
+        image_mask = cv2.bitwise_and(image_hsv, image_hsv, mask= mask1)
 
         # Se define kernel para operaciones morfológicas
         kernel = np.ones((5,5),np.uint8)
@@ -102,28 +104,35 @@ if __name__ == '__main__':
         # Esto corresponde a hacer un Opening
         # https://docs.opencv.org/trunk/d9/d61/tutorial_py_morphological_ops.html
         #Operacion morfologica erode
+        image_erode = cv2.erode(mask1, kernel, iterations = 1)
 
         #Operacion morfologica dilate
+        image_out = cv2.dilate(image_erode, kernel, iterations = 2)
 
 
         # Busca contornos de blobs
         # https://docs.opencv.org/trunk/d3/d05/tutorial_py_table_of_contents_contours.html
-
-
+        
+        contours, hierarchy = cv2.findContours(image_out, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         # Iterar sobre contornos y dibujar bounding box de los patos
         for cnt in contours:
             # Obtener rectangulo que bordea un contorno
-
+            x,y,w,h = cv2.boundingRect(cnt)
+            AREA= w*h
             #Filtrar por area minima
             if AREA > min_area: # DEFINIR AREA
                 #Dibujar rectangulo en el frame original
+                x,y,w,h = cv2.boundingRect(cnt)
+             #   print([x,y,w,h])
+                cv2.rectangle(obs, (x,y), (x+w,y+h), (200,0,0),2)
+                
 
 
         # Se muestra en una ventana llamada "patos" la observación del simulador
         # con los bounding boxes dibujados
         cv2.imshow('patos', cv2.cvtColor(obs, cv2.COLOR_RGB2BGR))
         # Se muestra en una ventana llamada "filtrado" la imagen filtrada
-        cv2.imshow('filtrado', image)
+        cv2.imshow('filtrado', image_out)
 
 
     # Se cierra el environment y termina el programa
